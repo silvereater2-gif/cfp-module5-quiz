@@ -183,6 +183,8 @@ function qid(q){let h=0;const s=q.q;for(let i=0;i<s.length;i++){h=(h*31+s.charCo
 function loadStats(){try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return{}}}
 function saveStats(s){localStorage.setItem(LS,JSON.stringify(s))}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+// escape dynamic exam text before injecting via innerHTML (guards < > & in questions/options/explains)
+function esc(s){return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 
 let stats = loadStats();
 if(!stats.rounds){stats={rounds:0,totalAnswered:0,totalCorrect:0,wrong:{}}}
@@ -269,7 +271,7 @@ function reveal(item,chosenPos,isCorrect){
   const fb=document.getElementById('feedback');
   fb.innerHTML=
     `<div class="verdict ${isCorrect?'ok':'bad'}">${isCorrect?'✓ ตอบถูก':'✗ ตอบผิด'}</div>`+
-    (q.explain?`<div class="explain"><div class="lab">คำอธิบาย</div><div class="txt">${q.explain}</div></div>`:'')+
+    (q.explain?`<div class="explain"><div class="lab">คำอธิบาย</div><div class="txt">${esc(q.explain)}</div></div>`:'')+
     `<div class="nav-next"><button class="btn" id="nextBtn">${allDone?'ดูผลคะแนน':'ข้อถัดไป'}</button></div>`;
   document.getElementById('nextBtn').onclick=next;
 }
@@ -288,7 +290,7 @@ function renderQ(){
   item.order.forEach((origIdx,pos)=>{
     const b=document.createElement('button');
     b.className='opt';b.dataset.pos=pos;
-    b.innerHTML=`<span class="k">${KEY[pos]}</span><span>${q.options[origIdx]}</span>`;
+    b.innerHTML=`<span class="k">${KEY[pos]}</span><span>${esc(q.options[origIdx])}</span>`;
     b.onclick=()=>choose(pos);
     opts.appendChild(b);
   });
@@ -361,10 +363,10 @@ function finish(){
       const it=quiz.find(x=>x.q===r.q);
       const youText=r.q.options[it.order[r.chosenPos]];
       const ansText=r.q.options[r.q.answer];
-      h+=`<div class="rev-item"><div class="rev-q">${r.q.q}</div>`+
-         `<div class="rev-line you">✗ คุณตอบ: ${youText}</div>`+
-         `<div class="rev-line ans">✓ คำตอบ: ${ansText}</div>`+
-         (r.q.explain?`<div class="rev-exp">${r.q.explain}</div>`:'')+`</div>`;
+      h+=`<div class="rev-item"><div class="rev-q">${esc(r.q.q)}</div>`+
+         `<div class="rev-line you">✗ คุณตอบ: ${esc(youText)}</div>`+
+         `<div class="rev-line ans">✓ คำตอบ: ${esc(ansText)}</div>`+
+         (r.q.explain?`<div class="rev-exp">${esc(r.q.explain)}</div>`:'')+`</div>`;
     });
     h+='</div>';rw.innerHTML=h;
   } else {
