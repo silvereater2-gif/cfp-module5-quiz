@@ -192,8 +192,8 @@ function renderStart(){
   const acc = stats.totalAnswered? Math.round(stats.totalCorrect/stats.totalAnswered*100):0;
   document.getElementById('allTimeStats').innerHTML =
     `<span class="chip">ทำไปแล้ว <b>${stats.rounds}</b> ชุด</span>`+
-    `<span class="chip">ตอบรวม <b>${stats.totalAnswered}</b> ข้อ</span>`+
-    `<span class="chip">ความแม่นยำ <b>${acc}%</b></span>`;
+    `<span class="chip">ความแม่นยำ <b>${acc}%</b></span>`+
+    `<span class="chip">ครอบคลุม <b>${Object.keys(stats.seen||{}).length}</b>/${POOL.length} ข้อ</span>`;
   const wc = Object.keys(stats.wrong||{}).length;
   const wb = document.getElementById('wrongBank');
   const ck = document.getElementById('focusWrong');
@@ -221,14 +221,19 @@ function startTimer(){
 }
 function stopTimer(){clearInterval(timerId)}
 
+// least-answered first (random within same tier) -> full coverage before repeats
+function byCoverage(arr){
+  const seen=stats.seen||{};
+  return shuffle(arr).sort((a,b)=>(seen[qid(a)]||0)-(seen[qid(b)]||0));
+}
 function buildQuiz(focus){
   let base;
   if(focus){
     const wids = stats.wrong||{};
     const wrongQs = POOL.filter(q=>wids[qid(q)]);
-    const rest = shuffle(POOL.filter(q=>!wids[qid(q)]));
-    base = shuffle(wrongQs).concat(rest); // wrong first, then fill
-  } else { base = shuffle(POOL); }
+    const rest = byCoverage(POOL.filter(q=>!wids[qid(q)]));
+    base = shuffle(wrongQs).concat(rest); // wrong first, then least-seen fill
+  } else { base = byCoverage(POOL); }
   const picked = base.slice(0, Math.min(N, POOL.length));
   quiz = shuffle(picked).map(q=>{
     const order = shuffle([0,1,2,3].slice(0,q.options.length));
@@ -312,6 +317,8 @@ function choose(pos){
   const id=qid(q);
   if(!isCorrect){stats.wrong=stats.wrong||{};stats.wrong[id]=(stats.wrong[id]||0)+1}
   else if(stats.wrong&&stats.wrong[id]){delete stats.wrong[id]}
+  stats.seen=stats.seen||{}; stats.seen[id]=(stats.seen[id]||0)+1;
+  saveStats(stats); // persist coverage + wrong bank each answer (survives quit mid-round)
   document.getElementById('scoreLive').textContent='ถูก '+correctCount;
   document.getElementById('qRemain').textContent=quiz.length-results.length;
   reveal(item,pos,isCorrect);
