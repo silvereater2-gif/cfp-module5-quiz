@@ -339,7 +339,7 @@ function skip(){ if(answered)return; gotoNext(); }
 function finish(){
   stopTimer();
   stats.rounds=(stats.rounds||0)+1;
-  stats.totalAnswered=(stats.totalAnswered||0)+quiz.length;
+  stats.totalAnswered=(stats.totalAnswered||0)+results.length; // actual answered, not 45 (timeouts leave some unanswered)
   stats.totalCorrect=(stats.totalCorrect||0)+correctCount;
   saveStats(stats);
   const pct=Math.round(correctCount/quiz.length*100);
