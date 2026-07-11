@@ -228,6 +228,18 @@ function byCoverage(arr){
   const seen=stats.seen||{};
   return shuffle(arr).sort((a,b)=>(seen[qid(a)]||0)-(seen[qid(b)]||0));
 }
+// options that summarize all others ("ถูกทุกข้อ"/"ไม่มีข้อใด") must stay last;
+// options that reference others by label ("ข้อ ข และ ข้อ ค") must NOT be shuffled
+const META_OPT=/ถูกทุกข้อ|ผิดทุกข้อ|ไม่มีข้อใด|ถูกทั้งหมด|ทั้งหมดที่กล่าว|ไม่มีข้อถูก|ถูกทุกข้อที่/;
+const REF_OPT=/ข้อ\s+[กขคง](?![ก-๛])|ข้อ\s+[1-4a-dA-D]\b|(?:^|\s)[กขคง]\s*(?:และ|หรือ|,)\s*[กขคง]/;
+function optionOrder(q){
+  const idxs=q.options.map((_,i)=>i);
+  if(q.options.some(o=>REF_OPT.test(o))) return idxs;          // referential -> keep original order
+  const meta=idxs.filter(i=>META_OPT.test(q.options[i]));
+  if(!meta.length) return shuffle(idxs);                       // no meta -> shuffle freely
+  const normal=idxs.filter(i=>!META_OPT.test(q.options[i]));
+  return shuffle(normal).concat(meta);                         // shuffle rest, pin meta last
+}
 function buildQuiz(focus){
   let base;
   if(focus){
@@ -238,7 +250,7 @@ function buildQuiz(focus){
   } else { base = byCoverage(POOL); }
   const picked = base.slice(0, Math.min(N, POOL.length));
   quiz = shuffle(picked).map(q=>{
-    const order = shuffle([0,1,2,3].slice(0,q.options.length));
+    const order = optionOrder(q);
     return {q, order, newAnswer: order.indexOf(q.answer), done:false};
   });
   idx=0;correctCount=0;results=[];
